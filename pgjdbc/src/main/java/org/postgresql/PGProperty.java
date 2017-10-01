@@ -172,6 +172,12 @@ public enum PGProperty {
       "Enable optimization that disables column name sanitiser"),
 
   /**
+   * Enable or disable strict mode. The default is {@code false}.
+   */
+  STRICT("strict", "false",
+      "Enable or disable strict mode. The default is {@code false}."),
+
+  /**
    * Control use of SSL (any non-null value causes SSL to be required).
    */
   SSL("ssl", null, "Control use of SSL (any non-null value causes SSL to be required)"),

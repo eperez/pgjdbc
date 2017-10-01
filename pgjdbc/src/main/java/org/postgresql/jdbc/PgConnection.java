@@ -325,6 +325,8 @@ public class PgConnection implements BaseConnection {
         false);
 
     replicationConnection = PGProperty.REPLICATION.get(info) != null;
+
+    strict = PGProperty.STRICT.getBoolean(info);
   }
 
   private Set<Integer> getOidSet(String oidList) throws PSQLException {
@@ -1629,4 +1631,11 @@ public class PgConnection implements BaseConnection {
     }
     return ps;
   }
+
+  private boolean strict = false;
+
+  public boolean isStrict() {
+    return strict;
+  }
+
 }
