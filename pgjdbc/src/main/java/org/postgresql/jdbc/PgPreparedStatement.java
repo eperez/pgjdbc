@@ -242,12 +242,18 @@ class PgPreparedStatement extends PgStatement implements PreparedStatement {
         oid = Oid.DATE;
         break;
       case Types.TIME:
+        oid = Oid.TIME;
+        break;
       //#if mvn.project.property.postgresql.jdbc.spec >= "JDBC4.2"
       case Types.TIME_WITH_TIMEZONE:
+        oid = Oid.TIMETZ;
+        break;
       case Types.TIMESTAMP_WITH_TIMEZONE:
+        oid = Oid.TIMESTAMPTZ;
+        break;
       //#endif
       case Types.TIMESTAMP:
-        oid = Oid.UNSPECIFIED;
+        oid = Oid.TIMESTAMP;
         break;
       case Types.BOOLEAN:
       case Types.BIT:
@@ -1303,7 +1309,7 @@ class PgPreparedStatement extends PgStatement implements PreparedStatement {
       return;
     }
 
-    int oid = Oid.UNSPECIFIED;
+    int oid = Oid.TIME;
 
     // If a PGTime is used, we can define the OID explicitly.
     if (t instanceof PGTime) {
@@ -1330,7 +1336,7 @@ class PgPreparedStatement extends PgStatement implements PreparedStatement {
       return;
     }
 
-    int oid = Oid.UNSPECIFIED;
+    int oid = Oid.TIMESTAMPTZ;
 
     // Use UNSPECIFIED as a compromise to get both TIMESTAMP and TIMESTAMPTZ working.
     // This is because you get this in a +1300 timezone:

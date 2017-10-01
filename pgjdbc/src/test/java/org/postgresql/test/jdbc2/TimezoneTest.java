@@ -91,7 +91,7 @@ public class TimezoneTest {
 
     connect();
     TestUtil.createTable(con, "testtimezone",
-        "seq int4, tstz timestamp with time zone, ts timestamp without time zone, t time without time zone, tz time with time zone, d date");
+        "seq int4, tstz timestamp with time zone, ts timestamp without time zone, t time without time zone, d date");
 
     // This is not obvious, but the "gmt-3" timezone is actually 3 hours *ahead* of GMT
     // so will produce +03 timestamptz output
@@ -118,17 +118,16 @@ public class TimezoneTest {
   @Test
   public void testGetTimestamp() throws Exception {
     con.createStatement().executeUpdate(
-        "INSERT INTO testtimezone(tstz,ts,t,tz,d) VALUES('2005-01-01 15:00:00 +0300', '2005-01-01 15:00:00', '15:00:00', '15:00:00 +0300', '2005-01-01')");
+        "INSERT INTO testtimezone(tstz,ts,t,d) VALUES('2005-01-01 15:00:00 +0300', '2005-01-01 15:00:00', '15:00:00', '2005-01-01')");
 
     for (int i = 0; i < PREPARE_THRESHOLD; i++) {
       String format = i == 0 ? ", text" : ", binary";
-      PreparedStatement ps = con.prepareStatement("SELECT tstz,ts,t,tz,d from testtimezone");
+      PreparedStatement ps = con.prepareStatement("SELECT tstz,ts,t,d from testtimezone");
       ResultSet rs = ps.executeQuery();
 
       assertTrue(rs.next());
-      checkDatabaseContents("SELECT tstz::text,ts::text,t::text,tz::text,d::text from testtimezone",
-          new String[]{"2005-01-01 12:00:00+00", "2005-01-01 15:00:00", "15:00:00", "15:00:00+03",
-              "2005-01-01"});
+      checkDatabaseContents("SELECT tstz::text,ts::text,t::text,d::text from testtimezone",
+          new String[]{"2005-01-01 12:00:00+00", "2005-01-01 15:00:00", "15:00:00", "2005-01-01"});
 
       Timestamp ts;
       String str;
@@ -175,37 +174,18 @@ public class TimezoneTest {
       str = rs.getString(3);
       assertEquals("time -> getString" + format, "15:00:00", str);
 
-      // timetz: 15:00:00+03
-      ts = rs.getTimestamp(4);
-      // 1970-01-01 15:00:00 +0300 -> 1970-01-01 13:00:00 +0100
-      assertEquals(43200000L, ts.getTime());
-      ts = rs.getTimestamp(4, cUTC);
-      // 1970-01-01 15:00:00 +0300 -> 1970-01-01 12:00:00 +0000
-      assertEquals(43200000L, ts.getTime());
-      ts = rs.getTimestamp(4, cGMT03);
-      // 1970-01-01 15:00:00 +0300 -> 1970-01-01 15:00:00 +0300
-      assertEquals(43200000L, ts.getTime());
-      ts = rs.getTimestamp(4, cGMT05);
-      // 1970-01-01 15:00:00 +0300 -> 1970-01-01 07:00:00 -0500
-      assertEquals(43200000L, ts.getTime());
-      ts = rs.getTimestamp(4, cGMT13);
-      // 1970-01-01 15:00:00 +0300 -> 1970-01-02 01:00:00 +1300 (CHECK ME)
-      assertEquals(-43200000L, ts.getTime());
-      str = rs.getString(3);
-      assertEquals("timetz -> getString" + format, "15:00:00", str);
-
       // date: 2005-01-01
-      ts = rs.getTimestamp(5);
+      ts = rs.getTimestamp(4);
       assertEquals(1104534000000L, ts.getTime()); // 2005-01-01 00:00:00 +0100
-      ts = rs.getTimestamp(5, cUTC);
+      ts = rs.getTimestamp(4, cUTC);
       assertEquals(1104537600000L, ts.getTime()); // 2005-01-01 00:00:00 +0000
-      ts = rs.getTimestamp(5, cGMT03);
+      ts = rs.getTimestamp(4, cGMT03);
       assertEquals(1104526800000L, ts.getTime()); // 2005-01-01 00:00:00 +0300
-      ts = rs.getTimestamp(5, cGMT05);
+      ts = rs.getTimestamp(4, cGMT05);
       assertEquals(1104555600000L, ts.getTime()); // 2005-01-01 00:00:00 -0500
-      ts = rs.getTimestamp(5, cGMT13);
+      ts = rs.getTimestamp(4, cGMT13);
       assertEquals(1104490800000L, ts.getTime()); // 2005-01-01 00:00:00 +1300
-      str = rs.getString(5);
+      str = rs.getString(4);
       assertEquals("date -> getString" + format, "2005-01-01", str);
 
       assertTrue(!rs.next());
@@ -272,15 +252,15 @@ public class TimezoneTest {
   @Test
   public void testGetTime() throws Exception {
     con.createStatement().executeUpdate(
-        "INSERT INTO testtimezone(tstz,ts,t,tz) VALUES('2005-01-01 15:00:00 +0300', '2005-01-01 15:00:00', '15:00:00', '15:00:00 +0300')");
+        "INSERT INTO testtimezone(tstz,ts,t) VALUES('2005-01-01 15:00:00 +0300', '2005-01-01 15:00:00', '15:00:00')");
 
-    PreparedStatement ps = con.prepareStatement("SELECT tstz,ts,t,tz from testtimezone");
+    PreparedStatement ps = con.prepareStatement("SELECT tstz,ts,t from testtimezone");
     for (int i = 0; i < PREPARE_THRESHOLD; i++) {
       ResultSet rs = ps.executeQuery();
 
       assertTrue(rs.next());
-      checkDatabaseContents("SELECT tstz::text,ts::text,t::text,tz::text,d::text from testtimezone",
-          new String[]{"2005-01-01 12:00:00+00", "2005-01-01 15:00:00", "15:00:00", "15:00:00+03"});
+      checkDatabaseContents("SELECT tstz::text,ts::text,t::text,d::text from testtimezone",
+          new String[]{"2005-01-01 12:00:00+00", "2005-01-01 15:00:00", "15:00:00"});
 
       Time t;
 
@@ -325,106 +305,16 @@ public class TimezoneTest {
       t = rs.getTime(3, cGMT13);
       assertEquals(7200000L, t.getTime()); // 1970-01-01 15:00:00 +1300
 
-      // timetz: 15:00:00+03
-      t = rs.getTime(4);
-      assertEquals(43200000L, t.getTime()); // 1970-01-01 13:00:00 +0100
-      t = rs.getTime(4, cUTC);
-      assertEquals(43200000L, t.getTime()); // 1970-01-01 12:00:00 +0000
-      t = rs.getTime(4, cGMT03);
-      assertEquals(43200000L, t.getTime()); // 1970-01-01 15:00:00 +0300
-      t = rs.getTime(4, cGMT05);
-      assertEquals(43200000L, t.getTime()); // 1970-01-01 07:00:00 -0500
-      t = rs.getTime(4, cGMT13);
-      assertEquals(-43200000L, t.getTime()); // 1970-01-01 01:00:00 +1300
       rs.close();
     }
   }
-
-  /**
-   * This test is broken off from testSetTimestamp because it does not work for pre-7.4 servers and
-   * putting tons of conditionals in that test makes it largely unreadable. The time data type does
-   * not accept timestamp with time zone style input on these servers.
-   */
-  @Test
-  public void testSetTimestampOnTime() throws Exception {
-    // Pre-7.4 servers cannot convert timestamps with timezones to times.
-    for (int i = 0; i < PREPARE_THRESHOLD; i++) {
-      con.createStatement().execute("delete from testtimezone");
-      PreparedStatement insertTimestamp =
-          con.prepareStatement("INSERT INTO testtimezone(seq,t) VALUES (?,?)");
-      int seq = 1;
-
-      Timestamp instant = new Timestamp(1104580800000L); // 2005-01-01 12:00:00 UTC
-      Timestamp instantTime = new Timestamp(instant.getTime() % DAY);
-
-      // +0100 (JVM default)
-      insertTimestamp.setInt(1, seq++);
-      insertTimestamp.setTimestamp(2, instant); // 13:00:00
-      insertTimestamp.executeUpdate();
-
-      // UTC
-      insertTimestamp.setInt(1, seq++);
-      insertTimestamp.setTimestamp(2, instant, cUTC); // 12:00:00
-      insertTimestamp.executeUpdate();
-
-      // +0300
-      insertTimestamp.setInt(1, seq++);
-      insertTimestamp.setTimestamp(2, instant, cGMT03); // 15:00:00
-      insertTimestamp.executeUpdate();
-
-      // -0500
-      insertTimestamp.setInt(1, seq++);
-      insertTimestamp.setTimestamp(2, instant, cGMT05); // 07:00:00
-      insertTimestamp.executeUpdate();
-
-      // +1300
-      insertTimestamp.setInt(1, seq++);
-      insertTimestamp.setTimestamp(2, instant, cGMT13); // 01:00:00
-      insertTimestamp.executeUpdate();
-
-      insertTimestamp.close();
-
-      checkDatabaseContents("SELECT seq::text,t::text from testtimezone ORDER BY seq",
-          new String[][]{new String[]{"1", "13:00:00"}, new String[]{"2", "12:00:00"},
-              new String[]{"3", "15:00:00"}, new String[]{"4", "07:00:00"},
-              new String[]{"5", "01:00:00"}});
-
-      seq = 1;
-      PreparedStatement ps = con.prepareStatement("SELECT seq,t FROM testtimezone ORDER BY seq");
-      ResultSet rs = ps.executeQuery();
-
-      assertTrue(rs.next());
-      assertEquals(seq++, rs.getInt(1));
-      assertEquals(instantTime, rs.getTimestamp(2));
-
-      assertTrue(rs.next());
-      assertEquals(seq++, rs.getInt(1));
-      assertEquals(instantTime, rs.getTimestamp(2, cUTC));
-
-      assertTrue(rs.next());
-      assertEquals(seq++, rs.getInt(1));
-      assertEquals(instantTime, rs.getTimestamp(2, cGMT03));
-
-      assertTrue(rs.next());
-      assertEquals(seq++, rs.getInt(1));
-      assertEquals(instantTime, rs.getTimestamp(2, cGMT05));
-
-      assertTrue(rs.next());
-      assertEquals(seq++, rs.getInt(1));
-      assertEquals(normalizeTimeOfDayPart(instantTime, cGMT13), rs.getTimestamp(2, cGMT13));
-
-      assertTrue(!rs.next());
-      ps.close();
-    }
-  }
-
 
   @Test
   public void testSetTimestamp() throws Exception {
     for (int i = 0; i < PREPARE_THRESHOLD; i++) {
       con.createStatement().execute("delete from testtimezone");
       PreparedStatement insertTimestamp =
-          con.prepareStatement("INSERT INTO testtimezone(seq,tstz,ts,tz,d) VALUES (?,?,?,?,?)");
+          con.prepareStatement("INSERT INTO testtimezone(seq,tstz,ts) VALUES (?,?,CAST(? AS TIMESTAMP WITHOUT TIME ZONE))");
       int seq = 1;
 
       Timestamp instant = new Timestamp(1104580800000L); // 2005-01-01 12:00:00 UTC
@@ -443,59 +333,44 @@ public class TimezoneTest {
       // +0100 (JVM default)
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTimestamp(2, instant); // 2005-01-01 13:00:00 +0100
-      insertTimestamp.setTimestamp(3, instant); // 2005-01-01 13:00:00
-      insertTimestamp.setTimestamp(4, instant); // 13:00:00 +0100
-      insertTimestamp.setTimestamp(5, instant); // 2005-01-01
+      insertTimestamp.setString(3, "2005-01-01 13:00:00");
       insertTimestamp.executeUpdate();
 
       // UTC
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTimestamp(2, instant, cUTC); // 2005-01-01 12:00:00 +0000
-      insertTimestamp.setTimestamp(3, instant, cUTC); // 2005-01-01 12:00:00
-      insertTimestamp.setTimestamp(4, instant, cUTC); // 12:00:00 +0000
-      insertTimestamp.setTimestamp(5, instant, cUTC); // 2005-01-01
+      insertTimestamp.setString(3, "2005-01-01 12:00:00");
       insertTimestamp.executeUpdate();
 
       // +0300
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTimestamp(2, instant, cGMT03); // 2005-01-01 15:00:00 +0300
-      insertTimestamp.setTimestamp(3, instant, cGMT03); // 2005-01-01 15:00:00
-      insertTimestamp.setTimestamp(4, instant, cGMT03); // 15:00:00 +0300
-      insertTimestamp.setTimestamp(5, instant, cGMT03); // 2005-01-01
+      insertTimestamp.setString(3, "2005-01-01 15:00:00");
       insertTimestamp.executeUpdate();
 
       // -0500
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTimestamp(2, instant, cGMT05); // 2005-01-01 07:00:00 -0500
-      insertTimestamp.setTimestamp(3, instant, cGMT05); // 2005-01-01 07:00:00
-      insertTimestamp.setTimestamp(4, instant, cGMT05); // 07:00:00 -0500
-      insertTimestamp.setTimestamp(5, instant, cGMT05); // 2005-01-01
+      insertTimestamp.setString(3, "2005-01-01 07:00:00");
       insertTimestamp.executeUpdate();
 
       // +1300
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTimestamp(2, instant, cGMT13); // 2005-01-02 01:00:00 +1300
-      insertTimestamp.setTimestamp(3, instant, cGMT13); // 2005-01-02 01:00:00
-      insertTimestamp.setTimestamp(4, instant, cGMT13); // 01:00:00 +1300
-      insertTimestamp.setTimestamp(5, instant, cGMT13); // 2005-01-02
+      insertTimestamp.setString(3, "2005-01-02 01:00:00");
       insertTimestamp.executeUpdate();
 
       insertTimestamp.close();
 
       // check that insert went correctly by parsing the raw contents in UTC
       checkDatabaseContents(
-          "SELECT seq::text,tstz::text,ts::text,tz::text,d::text from testtimezone ORDER BY seq",
+          "SELECT seq::text,tstz::text,ts::text from testtimezone ORDER BY seq",
           new String[][]{
-              new String[]{"1", "2005-01-01 12:00:00+00", "2005-01-01 13:00:00", "13:00:00+01",
-                  "2005-01-01"},
-              new String[]{"2", "2005-01-01 12:00:00+00", "2005-01-01 12:00:00", "12:00:00+00",
-                  "2005-01-01"},
-              new String[]{"3", "2005-01-01 12:00:00+00", "2005-01-01 15:00:00", "15:00:00+03",
-                  "2005-01-01"},
-              new String[]{"4", "2005-01-01 12:00:00+00", "2005-01-01 07:00:00", "07:00:00-05",
-                  "2005-01-01"},
-              new String[]{"5", "2005-01-01 12:00:00+00", "2005-01-02 01:00:00", "01:00:00+13",
-                  "2005-01-02"}});
+              new String[]{"1", "2005-01-01 12:00:00+00", "2005-01-01 13:00:00"},
+              new String[]{"2", "2005-01-01 12:00:00+00", "2005-01-01 12:00:00"},
+              new String[]{"3", "2005-01-01 12:00:00+00", "2005-01-01 15:00:00"},
+              new String[]{"4", "2005-01-01 12:00:00+00", "2005-01-01 07:00:00"},
+              new String[]{"5", "2005-01-01 12:00:00+00", "2005-01-02 01:00:00"}});
 
       //
       // check results
@@ -503,43 +378,33 @@ public class TimezoneTest {
 
       seq = 1;
       PreparedStatement ps =
-          con.prepareStatement("SELECT seq,tstz,ts,tz,d FROM testtimezone ORDER BY seq");
+          con.prepareStatement("SELECT seq,tstz,ts FROM testtimezone ORDER BY seq");
       ResultSet rs = ps.executeQuery();
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(instant, rs.getTimestamp(2));
       assertEquals(instant, rs.getTimestamp(3));
-      assertEquals(instantTime, rs.getTimestamp(4));
-      assertEquals(instantDateJVM, rs.getTimestamp(5));
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(instant, rs.getTimestamp(2, cUTC));
       assertEquals(instant, rs.getTimestamp(3, cUTC));
-      assertEquals(instantTime, rs.getTimestamp(4, cUTC));
-      assertEquals(instantDateUTC, rs.getTimestamp(5, cUTC));
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(instant, rs.getTimestamp(2, cGMT03));
       assertEquals(instant, rs.getTimestamp(3, cGMT03));
-      assertEquals(instantTime, rs.getTimestamp(4, cGMT03));
-      assertEquals(instantDateGMT03, rs.getTimestamp(5, cGMT03));
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(instant, rs.getTimestamp(2, cGMT05));
       assertEquals(instant, rs.getTimestamp(3, cGMT05));
-      assertEquals(instantTime, rs.getTimestamp(4, cGMT05));
-      assertEquals(instantDateGMT05, rs.getTimestamp(5, cGMT05));
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(instant, rs.getTimestamp(2, cGMT13));
       assertEquals(instant, rs.getTimestamp(3, cGMT13));
-      assertEquals(normalizeTimeOfDayPart(instantTime, cGMT13), rs.getTimestamp(4, cGMT13));
-      assertEquals(instantDateGMT13, rs.getTimestamp(5, cGMT13));
 
       assertTrue(!rs.next());
       ps.close();
@@ -661,7 +526,7 @@ public class TimezoneTest {
     for (int i = 0; i < PREPARE_THRESHOLD; i++) {
       con.createStatement().execute("delete from testtimezone");
       PreparedStatement insertTimestamp =
-          con.prepareStatement("INSERT INTO testtimezone(seq,t,tz) VALUES (?,?,?)");
+          con.prepareStatement("INSERT INTO testtimezone(seq,t) VALUES (?,?)");
 
       int seq = 1;
 
@@ -675,79 +540,69 @@ public class TimezoneTest {
       tJVM = new Time(50400000L); // 1970-01-01 15:00:00 +0100
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTime(2, tJVM); // 15:00:00
-      insertTimestamp.setTime(3, tJVM); // 15:00:00+03
       insertTimestamp.executeUpdate();
 
       // UTC
       tUTC = new Time(54000000L); // 1970-01-01 15:00:00 +0000
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTime(2, tUTC, cUTC); // 15:00:00
-      insertTimestamp.setTime(3, tUTC, cUTC); // 15:00:00+00
       insertTimestamp.executeUpdate();
 
       // +0300
       tGMT03 = new Time(43200000L); // 1970-01-01 15:00:00 +0300
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTime(2, tGMT03, cGMT03); // 15:00:00
-      insertTimestamp.setTime(3, tGMT03, cGMT03); // 15:00:00+03
       insertTimestamp.executeUpdate();
 
       // -0500
       tGMT05 = new Time(72000000L); // 1970-01-01 15:00:00 -0500
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTime(2, tGMT05, cGMT05); // 15:00:00
-      insertTimestamp.setTime(3, tGMT05, cGMT05); // 15:00:00-05
       insertTimestamp.executeUpdate();
 
       // +1300
       tGMT13 = new Time(7200000L); // 1970-01-01 15:00:00 +1300
       insertTimestamp.setInt(1, seq++);
       insertTimestamp.setTime(2, tGMT13, cGMT13); // 15:00:00
-      insertTimestamp.setTime(3, tGMT13, cGMT13); // 15:00:00+13
       insertTimestamp.executeUpdate();
 
       insertTimestamp.close();
 
       // check that insert went correctly by parsing the raw contents in UTC
-      checkDatabaseContents("SELECT seq::text,t::text,tz::text from testtimezone ORDER BY seq",
-          new String[][]{new String[]{"1", "15:00:00", "15:00:00+01",},
-              new String[]{"2", "15:00:00", "15:00:00+00",},
-              new String[]{"3", "15:00:00", "15:00:00+03",},
-              new String[]{"4", "15:00:00", "15:00:00-05",},
-              new String[]{"5", "15:00:00", "15:00:00+13",}});
+      checkDatabaseContents("SELECT seq::text,t::text from testtimezone ORDER BY seq",
+          new String[][]{new String[]{"1", "15:00:00",},
+              new String[]{"2", "15:00:00",},
+              new String[]{"3", "15:00:00",},
+              new String[]{"4", "15:00:00",},
+              new String[]{"5", "15:00:00",}});
 
       //
       // check results
       //
 
       seq = 1;
-      PreparedStatement ps = con.prepareStatement("SELECT seq,t,tz FROM testtimezone ORDER BY seq");
+      PreparedStatement ps = con.prepareStatement("SELECT seq,t FROM testtimezone ORDER BY seq");
       ResultSet rs = ps.executeQuery();
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(tJVM, rs.getTime(2));
-      assertEquals(tJVM, rs.getTime(3));
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(tUTC, rs.getTime(2, cUTC));
-      assertEquals(tUTC, rs.getTime(3, cUTC));
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(tGMT03, rs.getTime(2, cGMT03));
-      assertEquals(tGMT03, rs.getTime(3, cGMT03));
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(tGMT05, rs.getTime(2, cGMT05));
-      assertEquals(tGMT05, rs.getTime(3, cGMT05));
 
       assertTrue(rs.next());
       assertEquals(seq++, rs.getInt(1));
       assertEquals(tGMT13, rs.getTime(2, cGMT13));
-      assertEquals(tGMT13, rs.getTime(3, cGMT13));
 
       assertTrue(!rs.next());
       ps.close();
