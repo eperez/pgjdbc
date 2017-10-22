@@ -36,8 +36,12 @@ import org.postgresql.jdbc.AutoSave;
 import org.postgresql.jdbc.BatchResultHandler;
 import org.postgresql.jdbc.TimestampUtils;
 import org.postgresql.util.GT;
+import org.postgresql.util.PSQLDataException;
 import org.postgresql.util.PSQLException;
+import org.postgresql.util.PSQLIntegrityConstraintViolationException;
 import org.postgresql.util.PSQLState;
+import org.postgresql.util.PSQLSyntaxErrorException;
+import org.postgresql.util.PSQLTransactionRollbackException;
 import org.postgresql.util.PSQLWarning;
 import org.postgresql.util.ServerErrorMessage;
 
@@ -2479,7 +2483,22 @@ public class QueryExecutorImpl extends QueryExecutorBase {
       LOGGER.log(Level.FINEST, " <=BE ErrorMessage({0})", errorMsg.toString());
     }
 
-    PSQLException error = new PSQLException(errorMsg);
+    SQLException error;
+    if (errorMsg.getSQLState() != null) {
+      if (errorMsg.getSQLState().startsWith("22")) {
+        error = new PSQLDataException(errorMsg);
+      } else if (errorMsg.getSQLState().startsWith("23")) {
+        error = new PSQLIntegrityConstraintViolationException(errorMsg);
+      } else if (errorMsg.getSQLState().startsWith("40")) {
+        error = new PSQLTransactionRollbackException(errorMsg);
+      } else if (errorMsg.getSQLState().startsWith("42")) {
+        error = new PSQLSyntaxErrorException(errorMsg);
+      } else {
+        error = new PSQLException(errorMsg);
+      }
+    } else {
+      error = new PSQLException(errorMsg);
+    }
     if (transactionFailCause == null) {
       transactionFailCause = error;
     } else {
